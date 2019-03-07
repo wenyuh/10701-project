@@ -1,5 +1,8 @@
 # EM Semi-supervised Learning
 
+'''
+python3 test.py
+'''
 
 
 references:
