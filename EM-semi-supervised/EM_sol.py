@@ -18,13 +18,6 @@ def load_data():
     test_y = data_train[(11340+3780):, -1].astype(np.float64)
 
 
-    # train_x = data_train[:100, :-1].astype(np.float64)
-    # train_y = data_train[:100, -1].astype(np.float64)
-    # validation_x = data_train[(100):(150), :-1].astype(np.float64)
-    # validation_y = data_train[(100):(150), -1].astype(np.float64)
-    # test_x = data_train[(200):250, :-1].astype(np.float64)
-    # test_y = data_train[200:250, -1].astype(np.float64)
-
 
     return {
         'train_x': train_x,
@@ -35,10 +28,7 @@ def load_data():
         'validation_y': validation_y
     }
 
-# data_set = load_data()
-# x_supervised = train_x[:11000, :]
-# y_supervised = train_y[:11000, :]
-# x_unsupervised = train_x[11000:11340, :]
+
 
 
 class NaiveBayesSemiSupervised(object):
@@ -60,25 +50,16 @@ class NaiveBayesSemiSupervised(object):
 
 		positional arguments:!
 		    
-		    -- X_supervised: list of documents (string objects). these documents have labels
-		    
-		        example: ["all parrots are interesting", "some parrots are green", "some parrots can talk"]
-		        
-		    -- X_unsupervised: list of documents (string objects) as X_supervised, but without labels
-		    
-		    -- y_supervised: labels of the X_supervised documents. list or numpy array of integers. 
-		    
-		        example: [2, 0, 1, 0, 1, ..., 0, 2]
+		    -- X_supervised: [N_sup, in_features]
+		    -- X_unsupervised: [N_unsup, in_features]
+		    -- y_supervised: [N_sup, out_class]
 		"""
 
-		# prior = np.array([1.0/7.0]*7)
-		# print(prior)
-		# prior = np.array
-		# print("prior", prior)
+
 		# clf = GaussianNB()
 		clf = BernoulliNB()
 		clf.fit(x_supervised, y_supervised)
-		# self.train_naive_bayes(X_supervised, y_supervised)
+		
 
 		predi = clf.predict(x_supervised)
 
@@ -96,9 +77,7 @@ class NaiveBayesSemiSupervised(object):
 			unsupervised_log_matrix = clf._joint_log_likelihood(x_unsupervised)
 			supervised_log_matrix = clf._joint_log_likelihood(x_supervised)
 			print("unsupervised_log_matrix before log", unsupervised_log_matrix)
-			# unsupervised_log_matrix = np.log(unsupervised_log_matrix)
-			# supervised_log_matrix = np.log(supervised_log_matrix)
-			# print("unsupervised_log_matrix", unsupervised_log_matrix)
+			
 			total_likelihood = self.get_log_likelihood(unsupervised_log_matrix, supervised_log_matrix, y_supervised)
 			print("total likelihood: {}".format(total_likelihood))
 
@@ -122,15 +101,6 @@ class NaiveBayesSemiSupervised(object):
 		avg_error = 1 - diff_sum / np.shape(x_test)[0]
 		return avg_error
 
-		# y_hat = (self.clf).predict(x_test)
-		# print(type(y_hat))
-		# print(y_hat)
-		# print(y_test)
-		# diff = np.equal[y_hat, y_test].astype(int)
-		# print(diff)
-		# res = diff / (np.shape(x_test)[0])
-		# print("test error:", res)
-		# return res
 
 
 
@@ -145,15 +115,10 @@ class NaiveBayesSemiSupervised(object):
 
 			-- supervised_log_matrix: log likelihood of supervised x [N_sup, C]
 		    
-		    -- X_supervised: list of documents (string objects). these documents have labels
-		    
-		        example: ["all parrots are interesting", "some parrots are green", "some parrots can talk"]
-		        
-		    -- X_unsupervised: list of documents (string objects) as X_supervised, but without labels
-		    
-		    -- y_supervised: labels of the X_supervised documents. list or numpy array of integers. 
-		    
-		        example: [2, 0, 1, 0, 1, ..., 0, 2]
+		    -- y_supervised: labels of the X_supervised documents. [N_sup, in_features]
+
+		    supervised_term: sum of log likelihood of y_supervised given x_supervised and model param
+		    unsupervised_term: sum of log likelihood of y_hat_unsupervised given x_unsupervised and model param
 
 		"""
 		assert np.shape(unsupervised_log_matrix)[1] == 7
@@ -195,20 +160,4 @@ class NaiveBayesSemiSupervised(object):
 		else:
 		    
 			return False
-
-
-# data_set = load_data()
-# x_supervised = np.loadtxt("train_x.txt")
-# y_supervised = np.loadtxt("train_y.txt")
-# x_unsupervised = np.loadtxt("validation_x.txt")
-# x_supervised = train_x[:11340, :]
-# y_supervised = train_y[:11340, :]
-# x_unsupervised = train_x[11340:(11340+3780), :]
-
-
-# data_set = load_data()
-# x_supervised = train_x[:50, :]
-# y_supervised = train_y[:50, :]
-# x_unsupervised = train_x[50:, :]
-# print(x_supervised, flush=True)
 

@@ -2,11 +2,8 @@ from EM_sol import load_data, NaiveBayesSemiSupervised
 import numpy as np
 import sys
 
-# x_supervised = np.loadtxt("mini_x_supervised.txt")
-# y_supervised = np.loadtxt("mini_y_supervised.txt")
-# x_unsupervised = np.loadtxt("mini_x_unsupervised.txt")
 
-# data_set = load_data()
+data_set = load_data()
 
 x_supervised = np.loadtxt("train_x.txt")
 y_supervised = np.loadtxt("train_y.txt")
