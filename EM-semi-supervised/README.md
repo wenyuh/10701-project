@@ -12,3 +12,4 @@ data stored locally. Comment load_data(), uncomment lines about loadtxt to save 
 
 references:
 https://github.com/aboyker/semi-supervised-bayesian-classifier
+data: https://archive.ics.uci.edu/ml/datasets/covertype
