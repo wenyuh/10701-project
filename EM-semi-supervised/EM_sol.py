@@ -6,6 +6,9 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import GaussianNB
 from sklearn.naive_bayes import BernoulliNB
 
+# Repurposed and remodeled base source code from 
+# https://github.com/aboyker/semi-supervised-bayesian-classifier/blob/master/classifier.py
+
 
 def load_data():
     data_train = np.genfromtxt('covtype.data', dtype=int, delimiter=',')

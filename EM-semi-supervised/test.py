@@ -2,6 +2,9 @@ from EM_sol import load_data, NaiveBayesSemiSupervised
 import numpy as np
 import sys
 
+# Load the input data from the .txt files and push it through the 
+# semi-supervised EM pipeline using Naive Bayes 
+#
 
 data_set = load_data()
 
