@@ -79,10 +79,10 @@ class NaiveBayesSemiSupervised(object):
 			predi = clf.predict(x_supervised)
 			unsupervised_log_matrix = clf._joint_log_likelihood(x_unsupervised)
 			supervised_log_matrix = clf._joint_log_likelihood(x_supervised)
-			print("unsupervised_log_matrix before log", unsupervised_log_matrix)
+			# print("unsupervised_log_matrix before log", unsupervised_log_matrix)
 			
 			total_likelihood = self.get_log_likelihood(unsupervised_log_matrix, supervised_log_matrix, y_supervised)
-			print("total likelihood: {}".format(total_likelihood))
+			# print("total likelihood: {}".format(total_likelihood))
 
 			if self._stopping_time(old_likelihood, total_likelihood):
 			    
@@ -95,10 +95,10 @@ class NaiveBayesSemiSupervised(object):
 		return self.clf.predict(x_test)
 
 	def test_error(self, x_test, y_test):
-		print(x_test)
+		# print(x_test)
 		y_hat = self.clf.predict(x_test)
-		print(y_hat)
-		print(y_test)
+		# print(y_hat)
+		# print(y_test)
 		diff = np.equal(y_hat, y_test).astype(int)
 		diff_sum = np.sum(diff)
 		avg_error = 1 - diff_sum / np.shape(x_test)[0]
@@ -127,9 +127,9 @@ class NaiveBayesSemiSupervised(object):
 		assert np.shape(unsupervised_log_matrix)[1] == 7
 		assert np.shape(supervised_log_matrix)[1] == 7
 
-		print(np.shape(unsupervised_log_matrix))
-		print(np.shape(supervised_log_matrix))
-		print(unsupervised_log_matrix)
+		# print(np.shape(unsupervised_log_matrix))
+		# print(np.shape(supervised_log_matrix))
+		# print(unsupervised_log_matrix)
 		unsupervised_term = np.sum(np.amax(unsupervised_log_matrix, axis=1))
 		N_sup = np.shape(supervised_log_matrix)[0] 
 		y_supervised = y_supervised.astype(int)
