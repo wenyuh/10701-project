@@ -5,6 +5,7 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.semi_supervised import LabelSpreading
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
+from nn_class import Net
 import random
 
 x_train = np.loadtxt("train_x.txt")
@@ -14,15 +15,22 @@ y_test = np.loadtxt("test_y.txt")
 
 
 # clf1 = BernoulliNB()
-clf1 = LabelSpreading(kernel="knn")
+# clf1 = LabelSpreading(kernel="knn")
 # clf2 = LabelSpreading(kernel='knn')
-clf2 = BernoulliNB()
+# clf2 = BernoulliNB()
 # clf1 = MLPClassifier(solver='sgd', activation='logistic')
 # clf2 = MLPClassifier(solver='sgd', activation='logistic')
 # clf1 = SVC(probability=True)
 # clf2 = SVC(probability=True)
+clf1 = Net()
+clf2 = Net()
 
 coTrain = CoTrainingClassifier(clf1, clf2, n=5, p=5)
+
+igs = list(np.load('information_gain.npy'))
+igs_sorted = sorted([for i,ig in enumerate(igs)], key=lambda a: a[1], reverse=True)
+igs_sorted_idx = [i for i,ig in igs_sorted]
+
 
 for i in range(1):
 	cur_supervised_num = int(5 * 0.1 * 11340)
