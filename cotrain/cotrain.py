@@ -18,7 +18,7 @@ class CoTrainingClassifier(object):
 		Default - 75 (from paper)
 	"""
 
-	def __init__(self, clf, clf2=None, p=-1, n=-1, k=30, u = 75):
+	def __init__(self, clf, clf2=None, p=-1, n=-1, k=5, u = 75):
 		self.clf1_ = clf
 		
 		#we will just use a copy of clf (the same kind of classifier) if clf2 is not specified
@@ -39,7 +39,7 @@ class CoTrainingClassifier(object):
 		random.seed()
 
 
-	def fit(self, X1, X2, y):
+	def fit(self, X1, X2, y, validation_x1, validation_x2, validation_y):
 		"""
 		Description:
 		fits the classifiers on the partially labeled data, y.
@@ -50,7 +50,7 @@ class CoTrainingClassifier(object):
 		"""
 
 		#we need y to be a numpy array so we can do more complex slicing
-		y = np.asarray(y)
+		# y = np.asarray(y)
 
 		#set the n and p parameters if we need to
 		# if self.p_ == -1 and self.n_ == -1:
@@ -70,16 +70,18 @@ class CoTrainingClassifier(object):
 		# assert(self.p_ > 0 and self.n_ > 0 and self.k_ > 0 and self.u_ > 0)
 
 		#the set of unlabeled samples
-		U = [i for i, y_i in enumerate(y) if y_i == -1]
+		U = np.arange(5 * 0.1 * 11340 - 300, 11340 - 300).astype(int)
+		# U = [i for i, y_i in enumerate(y) if y_i == -1]
 
 		#we randomize here, and then just take from the back so we don't have to sample every time
 		random.shuffle(U)
 
 		#this is U' in paper
-		U_ = U[-min(len(U), self.u_):]
+		U_ = U[-min(len(U), self.u_):].astype(int)
 
 		#the samples that are initially labeled
-		L = [i for i, y_i in enumerate(y) if y_i != -1]
+		# L = [i for i, y_i in enumerate(y) if y_i != -1]
+		L = np.arange(0, 5 * 0.1 * 11340-300).astype(int)
 
 		#remove the samples in U_ from U
 		U = U[:-len(U_)]
@@ -88,11 +90,11 @@ class CoTrainingClassifier(object):
 		it = 0 #number of cotraining iterations we've done so far
 
 		#loop until we have assigned labels to everything in U or we hit our iteration break condition
-		while it != self.k_ and U:
+		while it != self.k_ and U.shape[0] > self.n_*7:
 			it += 1
 
-			self.clf1_.fit(X1[L], y[L])
-			self.clf2_.fit(X2[L], y[L])
+			self.clf1_.fit(X1[L], y[L], validation_x1, validation_y)
+			self.clf2_.fit(X2[L], y[L], validation_x2, validation_y)
 
 			y1 = self.clf1_.predict(X1[U_])
 			y2 = self.clf2_.predict(X2[U_])
@@ -107,19 +109,19 @@ class CoTrainingClassifier(object):
 			y2_prob_max = [max(lst) for lst in y2_prob]
 
 			
-			y1_topN = zip(y1, y1_prob_max) # (index at U, index at X/Y, label, prob)
+			y1_topN = zip(y1, y1_prob_max) # (index at U_, index at X/Y, label(col#), prob)
 			y1_topN = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y1_topN)]
 			y2_topN = zip(y2, y2_prob_max)
 			y2_topN = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y2_topN)]
 			assert len(y1_topN) == len(U_)
 
-			y1_topN = sorted(y1_topN, key=lambda a: a[3], reverse=True)[self.n_:]
-			y2_topN = sorted(y2_topN, key=lambda a: a[3], reverse=True)[self.n_:]
+			y1_topN = sorted(y1_topN, key=lambda a: a[3], reverse=True)[:self.n_]
+			y2_topN = sorted(y2_topN, key=lambda a: a[3], reverse=True)[:self.n_]
 
 			print("y1_topN: ", y1_topN)
 			print("y2_topN: ", y2_topN)
 			self.theta1_ = 0.9
-			self.theta2_ = 0.3
+			self.theta2_ = 0.9
 			y1_topN_theta = list(filter(lambda a: a[3] > self.theta1_, y1_topN))
 			y2_topN_theta = list(filter(lambda a: a[3] > self.theta2_, y2_topN))
 
@@ -133,11 +135,19 @@ class CoTrainingClassifier(object):
 				# 	U_.pop(a[0])
 				# num_to_add = len(y1_topN)
 
-				L.extend([a[1] for a in y1_topN_theta])
+				L = np.append(L, [a[1] for a in y1_topN_theta])
+				# L.extend([a[1] for a in y1_topN_theta])
 				for a in sorted(y1_topN_theta, key=lambda a: a[0], reverse=True):
-					y[a[1]] = a[2]
+					y[a[1]] = np.full(y[0].shape, 0)
+					y[a[1]][a[2]] = 1
+					# y = y.astype(str)
+					# y[a[1]] = a[2]
 					# print("a[0]: ", a[0])
-					U_.pop(a[0])
+					# U_.pop(a[0])
+					if (a[0] < U_.shape[0]-1):
+						U_ = np.append(U_[:a[0]], U_[a[0]+1:], axis=0)
+					else:
+						U_ = U_[:a[0]]
 				num_to_add = len(y1_topN_theta)
 
 			else:
@@ -146,10 +156,17 @@ class CoTrainingClassifier(object):
 				# 	y[a[1]] = a[2]		
 				# 	U_.pop(a[0])	
 				# num_to_add = len(y2_topN)	
-				L.extend([a[1] for a in y2_topN_theta])
+				L = np.append(L, [a[1] for a in y2_topN_theta])
+				# L.extend([a[1] for a in y2_topN_theta])
 				for a in sorted(y2_topN_theta, key=lambda a: a[0], reverse=True):
-					y[a[1]] = a[2]		
-					U_.pop(a[0])	
+					y[a[1]] = np.full(y[0].shape, 0)
+					y[a[1]][a[2]] = 1
+					# y[a[1]] = a[2]		
+					# U_.pop(a[0])
+					if (a[0] < U_.shape[0]-1):
+						U_ = np.append(U_[:a[0]], U_[a[0]+1:], axis=0)
+					else:
+						U_ = U_[:a[0]]
 				num_to_add = len(y2_topN_theta)
 
 			# print("len U: ", len(U_))
@@ -186,17 +203,21 @@ class CoTrainingClassifier(object):
 			#add new elements to U_
 			add_counter = 0 #number we have added from U to U_
 			# num_to_add = len(p) + len(n)
-			while add_counter != num_to_add and U:
+			while add_counter != num_to_add and U.shape[0]>0:
 				add_counter += 1
-				U_.append(U.pop())
+				# print(U_.shape, U.shape)
+				# assert U_.shape[1] == U.shape[1]
+				U_ = np.append(U_, [U[0]], axis=0)
+				U = U[1:]
+				# U_.append(U.pop())
 
 
 			#TODO: Handle the case where the classifiers fail to agree on any of the samples (i.e. both n and p are empty)
 
 
 		#let's fit our final model
-		self.clf1_.fit(X1[L], y[L])
-		self.clf2_.fit(X2[L], y[L])
+		self.clf1_.fit(X1[L], y[L], validation_x1, validation_y)
+		self.clf2_.fit(X2[L], y[L], validation_x2, validation_y)
 
 
 	#TODO: Move this outside of the class into a util file.
@@ -225,24 +246,32 @@ class CoTrainingClassifier(object):
 		y1 = self.clf1_.predict(X1)
 		y2 = self.clf2_.predict(X2)
 
-		proba_supported = self.supports_proba(self.clf1_, X1[0]) and self.supports_proba(self.clf2_, X2[0])
+		# proba_supported = self.supports_proba(self.clf1_, X1[0]) and self.supports_proba(self.clf2_, X2[0])
 
 		#fill y_pred with -1 so we can identify the samples in which the classifiers failed to agree
 		y_pred = np.asarray([-1] * X1.shape[0])
 
+		print("cotrain predict start loop")
 		for i, (y1_i, y2_i) in enumerate(zip(y1, y2)):
 			if y1_i == y2_i:
+				print("hellYEAH")
 				y_pred[i] = y1_i
-			elif proba_supported:
-				y1_probs = self.clf1_.predict_proba([X1[i]])[0]
-				y2_probs = self.clf2_.predict_proba([X2[i]])[0]
+			# elif proba_supported:
+			else:
+				# y1_probs = self.clf1_.predict_proba([X1[i]])[0]
+				# y2_probs = self.clf2_.predict_proba([X2[i]])[0]
+				# print("shape: ", X1[i].shape)
+				# print("X1[i]: ", X1[i])
+				y1_probs = self.clf1_.predict_proba(X1[i].reshape((1,27)))
+				y2_probs = self.clf2_.predict_proba(X2[i].reshape((1,27)))
 				sum_y_probs = [prob1 + prob2 for (prob1, prob2) in zip(y1_probs, y2_probs)]
 				max_sum_prob = max(sum_y_probs)
 				y_pred[i] = sum_y_probs.index(max_sum_prob)
 
-			else:
-				#the classifiers disagree and don't support probability, so we guess
-				y_pred[i] = random.randint(0, 8)
+			# else:
+			# 	#the classifiers disagree and don't support probability, so we guess
+			# 	print("guess")
+			# 	y_pred[i] = random.randint(0, 8)
 
 			
 		#check that we did everything right
@@ -253,17 +282,18 @@ class CoTrainingClassifier(object):
 
 	def predict_proba(self, X1, X2):
 		"""Predict the probability of the samples belonging to each class."""
-		y_proba = np.full((X1.shape[0], 2), -1)
+		y_proba = np.full((X1.shape[0], 7), -1)
 
 		y1_proba = self.clf1_.predict_proba(X1)
 		y2_proba = self.clf2_.predict_proba(X2)
 
 		for i, (y1_i_dist, y2_i_dist) in enumerate(zip(y1_proba, y2_proba)):
-			y_proba[i][0] = (y1_i_dist[0] + y2_i_dist[0]) / 2
-			y_proba[i][1] = (y1_i_dist[1] + y2_i_dist[1]) / 2
+			y_proba[i] = (y1_i_dist + y2_i_dist) / 2
+			# y_proba[i][0] = (y1_i_dist[0] + y2_i_dist[0]) / 2
+			# y_proba[i][1] = (y1_i_dist[1] + y2_i_dist[1]) / 2
 
 		_epsilon = 0.0001
-		assert all(abs(sum(y_dist) - 1) <= _epsilon for y_dist in y_proba)
+		# assert all(abs(sum(y_dist) - 1) <= _epsilon for y_dist in y_proba)
 		return y_proba
 
 
