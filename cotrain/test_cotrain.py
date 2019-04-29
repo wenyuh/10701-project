@@ -101,9 +101,31 @@ for i in range(1):
 	val_auc = accuracy_score(np.argmax(validation_y, axis = 1), np.argmax(preds_val, axis = 1))
 	print("val_auc", val_auc)
 
+	preds_val_clf1 = coTrain.clf1_.predict_proba(validation_x[:, feature1])
+	print(validation_y.shape, preds_val_clf1.shape)
+	val_auc_clf1 = accuracy_score(np.argmax(validation_y, axis = 1), np.argmax(preds_val_clf1, axis = 1))
+	print("val_auc_clf1", val_auc_clf1)
+
+	preds_val_clf2= coTrain.clf2_.predict_proba(validation_x[:, feature2])
+	val_auc_clf2 = accuracy_score(np.argmax(validation_y, axis = 1), np.argmax(preds_val_clf2, axis = 1))
+	print("val_auc_clf2", val_auc_clf2)
+
+	# print("clf1 clf2 equal %", np.sum(np.equal(np.argmax(preds_val_clf1, axis=1), np.argmax(preds_val_clf2, axis=1))) / 300.0)
+	# print("clf1 coTrain equal %", np.sum(np.equal(np.argmax(preds_val_clf1, axis=1), np.argmax(preds_val, axis=1))) / 300.0)
+	# print("clf2 coTrain equal %", np.sum(np.equal(np.argmax(preds_val_clf2, axis=1), np.argmax(preds_val, axis=1))) / 300.0)
+
 	preds_test = coTrain.predict_proba(x_test[:, feature1], x_test[:, feature2])
 	test_auc = accuracy_score(np.argmax(y_test, axis = 1), np.argmax(preds_test, axis = 1))
 	print("test_auc", test_auc)
+
+	preds_test_clf1= coTrain.clf1_.predict_proba(x_test[:, feature1])
+	test_auc_clf1 = accuracy_score(np.argmax(y_test, axis = 1), np.argmax(preds_test_clf1, axis = 1))
+	print("test_auc_clf1", test_auc_clf1)
+
+	preds_test_clf2= coTrain.clf2_.predict_proba(x_test[:, feature2])
+	test_auc_clf2 = accuracy_score(np.argmax(y_test, axis = 1), np.argmax(preds_test_clf2, axis = 1))
+	print("test_auc_clf2", test_auc_clf2)
+
 
 	# test_error = coTrain.test_error(x_test[:10000, feature1], x_test[:10000, feature2], y_test[:10000])
 	# print("test error: ", test_error)

@@ -18,7 +18,7 @@ class CoTrainingClassifier(object):
 		Default - 75 (from paper)
 	"""
 
-	def __init__(self, clf, clf2=None, p=-1, n=-1, k=5, u = 75):
+	def __init__(self, clf, clf2=None, p=-1, n=-1, k=30, u = 75):
 		self.clf1_ = clf
 		
 		#we will just use a copy of clf (the same kind of classifier) if clf2 is not specified
@@ -282,15 +282,28 @@ class CoTrainingClassifier(object):
 
 	def predict_proba(self, X1, X2):
 		"""Predict the probability of the samples belonging to each class."""
-		y_proba = np.full((X1.shape[0], 7), -1)
+		y_proba = np.full((X1.shape[0], 7), -1).astype(np.float64)
 
 		y1_proba = self.clf1_.predict_proba(X1)
 		y2_proba = self.clf2_.predict_proba(X2)
 
+		# print("y1_proba", y1_proba)
+		# a = y1_proba[0]
+		# print(sum(a))
+		# assert abs(sum(a) - 1) <= 0.0001
+
 		for i, (y1_i_dist, y2_i_dist) in enumerate(zip(y1_proba, y2_proba)):
 			y_proba[i] = (y1_i_dist + y2_i_dist) / 2
+			# y_proba[i] = 
+			# print(y1_i_dist, y2_i_dist, y_proba[i])
+			# print(np.argmax(y1_i_dist), np.argmax(y2_i_dist), np.argmax(y_proba[i]))
+			# y_proba[i] = np.maximum(y1_i_dist, y2_i_dist)
 			# y_proba[i][0] = (y1_i_dist[0] + y2_i_dist[0]) / 2
 			# y_proba[i][1] = (y1_i_dist[1] + y2_i_dist[1]) / 2
+
+		# print("clf1 clf2 equal %", np.sum(np.equal(np.argmax(y1_proba, axis=1), np.argmax(y2_proba, axis=1))) / X1.shape[0])
+		# print("clf1 y_proba equal %", np.sum(np.equal(np.argmax(y1_proba, axis=1), np.argmax(y_proba, axis=1))) / X1.shape[0])
+		# print("clf2 y_proba equal %", np.sum(np.equal(np.argmax(y2_proba, axis=1), np.argmax(y_proba, axis=1))) / X1.shape[0])
 
 		_epsilon = 0.0001
 		# assert all(abs(sum(y_dist) - 1) <= _epsilon for y_dist in y_proba)
