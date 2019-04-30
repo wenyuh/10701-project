@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import copy
+from sklearn.metrics import roc_auc_score, accuracy_score
+
 class CoTrainingClassifier(object):
 	"""
 	Parameters:
@@ -39,7 +41,7 @@ class CoTrainingClassifier(object):
 		random.seed()
 
 
-	def fit(self, X1, X2, y, validation_x1, validation_x2, validation_y):
+	def fit(self, X1, X2, y, validation_x1, validation_x2, validation_y, data_percent):
 		"""
 		Description:
 		fits the classifiers on the partially labeled data, y.
@@ -70,7 +72,7 @@ class CoTrainingClassifier(object):
 		# assert(self.p_ > 0 and self.n_ > 0 and self.k_ > 0 and self.u_ > 0)
 
 		#the set of unlabeled samples
-		U = np.arange(5 * 0.1 * 11340 - 300, 11340 - 300).astype(int)
+		U = np.arange(data_percent * 0.1 * 11340 - 300, 11340 - 300).astype(int)
 		# U = [i for i, y_i in enumerate(y) if y_i == -1]
 
 		#we randomize here, and then just take from the back so we don't have to sample every time
@@ -81,18 +83,26 @@ class CoTrainingClassifier(object):
 
 		#the samples that are initially labeled
 		# L = [i for i, y_i in enumerate(y) if y_i != -1]
-		L = np.arange(0, 5 * 0.1 * 11340-300).astype(int)
+		L = np.arange(0, data_percent * 0.1 * 11340-300).astype(int)
 
 		#remove the samples in U_ from U
 		U = U[:-len(U_)]
 
-
+		self.epoch_train_auc = [0]*(self.k_+1)
+		self.epoch_val_auc = [0] * (self.k_ + 1)
 		it = 0 #number of cotraining iterations we've done so far
 
 		#loop until we have assigned labels to everything in U or we hit our iteration break condition
 		while it != self.k_ and U.shape[0] > self.n_*7:
 			it += 1
 
+			assert X1[L].shape[0] == y[L].shape[0]
+			assert validation_x1.shape[0] == validation_y.shape[0]
+			# print(X1.shape, y.shape, validation_x1.shape, validation_y.shape)
+			# print("X1:",X1)
+			# print("y", y)
+			# print("validation_x1", validation_x1)
+			# print("validation_y", validation_y)
 			self.clf1_.fit(X1[L], y[L], validation_x1, validation_y)
 			self.clf2_.fit(X2[L], y[L], validation_x2, validation_y)
 
@@ -109,24 +119,39 @@ class CoTrainingClassifier(object):
 			y2_prob_max = [max(lst) for lst in y2_prob]
 
 			
-			y1_topN = zip(y1, y1_prob_max) # (index at U_, index at X/Y, label(col#), prob)
-			y1_topN = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y1_topN)]
-			y2_topN = zip(y2, y2_prob_max)
-			y2_topN = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y2_topN)]
-			assert len(y1_topN) == len(U_)
+			y1_topN1 = zip(y1, y1_prob_max) # (index at U_, index at X/Y, label(col#), prob)
+			y1_topN1 = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y1_topN1)]
+			y2_topN1 = zip(y2, y2_prob_max)
+			y2_topN1 = [(i, U_[i], a[0], a[1]) for i,a in enumerate(y2_topN1)]
+			assert len(y1_topN1) == len(U_)
 
-			y1_topN = sorted(y1_topN, key=lambda a: a[3], reverse=True)[:self.n_]
-			y2_topN = sorted(y2_topN, key=lambda a: a[3], reverse=True)[:self.n_]
+			y1_topN = []
+			y2_topN = []
+			for k in range(7):
+				label_k1 = filter(lambda a: a[2] == k, y1_topN1)
+				label_k2 = filter(lambda a: a[2] == k, y2_topN1)
+				y1_topN.extend(sorted(label_k1, key=lambda a: a[3], reverse=True)[:self.n_])
+				y2_topN.extend(sorted(label_k2, key=lambda a: a[3], reverse=True)[:self.n_])
 
-			print("y1_topN: ", y1_topN)
-			print("y2_topN: ", y2_topN)
+
+
+
+			# y1_topN = sorted(y1_topN1, key=lambda a: a[3], reverse=True)[:self.n_]
+			# y2_topN = sorted(y2_topN1, key=lambda a: a[3], reverse=True)[:self.n_]
+
+			# print("y1_topN: ", y1_topN)
+			# print("y2_topN: ", y2_topN)
 			self.theta1_ = 0.9
 			self.theta2_ = 0.9
 			y1_topN_theta = list(filter(lambda a: a[3] > self.theta1_, y1_topN))
 			y2_topN_theta = list(filter(lambda a: a[3] > self.theta2_, y2_topN))
 
 			# print("U len: ", len(U_))
-			print("len1, len2 = ", len(y1_topN_theta), len(y2_topN_theta))
+			# print("len1, len2 = ", len(y1_topN_theta), len(y2_topN_theta))
+			# for k in range(7):
+				# print("k=%d: %d, %d",k, len(list(filter(lambda a: a[2] == k, y1_topN_theta))),
+				# 	len(list(filter(lambda a: a[2] == k, y2_topN_theta))))
+
 			if (len(y1_topN_theta) > len(y2_topN_theta)):
 				# L.extend([a[1] for a in y1_topN])
 				# for a in sorted(y1_topN, key=lambda a: a[0], reverse=True):
@@ -212,12 +237,28 @@ class CoTrainingClassifier(object):
 				# U_.append(U.pop())
 
 
+			# preds_val = self.predict_proba(validation_x1, validation_x2)
+			# val_auc = accuracy_score(np.argmax(validation_y, axis = 1), np.argmax(preds_val, axis = 1))
+			# self.epoch_val_auc[it] = val_auc
+			val_error = self.test_error(validation_x1, validation_x2, validation_y)
+			self.epoch_val_auc[it] = 1.0 - val_error
+
+			# preds_train = self.predict_proba(X1, X2)
+			# train_auc = accuracy_score(np.argmax(y, axis = 1), np.argmax(preds_train, axis = 1))
+			# self.epoch_train_auc[it] = train_auc
+			train_error = self.test_error(X1, X2, y)
+			self.epoch_train_auc[it] = 1.0 - train_error
+
+
 			#TODO: Handle the case where the classifiers fail to agree on any of the samples (i.e. both n and p are empty)
 
 
 		#let's fit our final model
 		self.clf1_.fit(X1[L], y[L], validation_x1, validation_y)
 		self.clf2_.fit(X2[L], y[L], validation_x2, validation_y)
+
+		print("epoch_val_auc:", self.epoch_val_auc)
+		print("epoch_train_auc:", self.epoch_train_auc)
 
 
 	#TODO: Move this outside of the class into a util file.
@@ -252,9 +293,14 @@ class CoTrainingClassifier(object):
 		y_pred = np.asarray([-1] * X1.shape[0])
 
 		print("cotrain predict start loop")
+
+		y1_probs = self.clf1_.predict_proba(X1)
+		y2_probs = self.clf2_.predict_proba(X2)
+		y_pred_max = np.argmax(y1_probs + y2_probs, axis = 1)
+
 		for i, (y1_i, y2_i) in enumerate(zip(y1, y2)):
 			if y1_i == y2_i:
-				print("hellYEAH")
+				# print("hellYEAH")
 				y_pred[i] = y1_i
 			# elif proba_supported:
 			else:
@@ -262,11 +308,12 @@ class CoTrainingClassifier(object):
 				# y2_probs = self.clf2_.predict_proba([X2[i]])[0]
 				# print("shape: ", X1[i].shape)
 				# print("X1[i]: ", X1[i])
-				y1_probs = self.clf1_.predict_proba(X1[i].reshape((1,27)))
-				y2_probs = self.clf2_.predict_proba(X2[i].reshape((1,27)))
-				sum_y_probs = [prob1 + prob2 for (prob1, prob2) in zip(y1_probs, y2_probs)]
-				max_sum_prob = max(sum_y_probs)
-				y_pred[i] = sum_y_probs.index(max_sum_prob)
+				# y1_probs = self.clf1_.predict_proba(X1[i].reshape((1,27)))
+				# y2_probs = self.clf2_.predict_proba(X2[i].reshape((1,27)))
+				# sum_y_probs = [prob1 + prob2 for (prob1, prob2) in zip(y1_probs, y2_probs)]
+				# max_sum_prob = max(sum_y_probs)
+				# y_pred[i] = sum_y_probs.index(max_sum_prob)
+				y_pred[i] = y_pred_max[i]
 
 			# else:
 			# 	#the classifiers disagree and don't support probability, so we guess
@@ -312,7 +359,7 @@ class CoTrainingClassifier(object):
 
 	def test_error(self, X1, X2, Y):
 		y_hat = self.predict(X1, X2)
-		diff = np.equal(y_hat, Y).astype(int)
+		diff = np.equal(y_hat, np.argmax(Y, axis=1).astype(int))
 		diff_sum = np.sum(diff)
 		avg_error = 1 - diff_sum / np.shape(X1)[0]
 		return avg_error
